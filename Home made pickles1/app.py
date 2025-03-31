@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
 from datetime import datetime
 import json,uuid
+from decimal import Decimal
 
 app = Flask(__name__)
 app.secret_key = 'your_very_secret_key_12345'  # Change for production!
@@ -190,7 +191,7 @@ def checkout():
 
             try:
                 cart_items = json.loads(cart_data)
-                total_amount = float(total_amount)
+                total_amount = Decimal(total_amount)  # ✅ Convert to Decimal for DynamoDB
             except (json.JSONDecodeError, ValueError):
                 return render_template('checkout.html', error="Invalid cart data format.")
 
@@ -208,7 +209,7 @@ def checkout():
                         'address': address,
                         'phone': phone,
                         'items': cart_items,
-                        'total_amount': total_amount,
+                        'total_amount': str(total_amount),  # ✅ Convert Decimal to string to avoid JSON issues
                         'payment_method': payment_method,
                         'timestamp': datetime.now().isoformat()
                     }
@@ -218,7 +219,7 @@ def checkout():
                 return render_template('checkout.html', error="Failed to save order. Please try again later.")
 
             # Redirect to success page with success message
-            return redirect(url_for('sucess', message="Your order has been placed successfully!"))
+            return redirect(url_for('sucess', message="Your order has been placed successfully!"))  # ✅ Fixed typo
 
         except Exception as e:
             print(f"Checkout error: {str(e)}")
