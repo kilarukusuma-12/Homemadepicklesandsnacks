@@ -229,8 +229,9 @@ def checkout():
 
 
 @app.route('/sucess')
-def success():
+def sucess():  # ✅ Match function name with url_for('sucess')
     return render_template('sucess.html')
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)  # Add debug=True temporarily
