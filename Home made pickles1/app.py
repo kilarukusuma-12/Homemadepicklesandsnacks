@@ -167,49 +167,65 @@ def checkout():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
+    error_message = None  # Variable to hold error messages
+
     if request.method == 'POST':
         try:
-            # Get form data
-            name = request.form['name']
-            address = request.form['address']
-            phone = request.form['phone']
-            payment_method = request.form['payment']
+            # Extract form data safely
+            name = request.form.get('name', '').strip()
+            address = request.form.get('address', '').strip()
+            phone = request.form.get('phone', '').strip()
+            payment_method = request.form.get('payment', '').strip()
             
+            # Validate inputs
+            if not all([name, address, phone, payment_method]):
+                return render_template('checkout.html', error="All fields are required.")
+
+            if not phone.isdigit() or len(phone) != 10:
+                return render_template('checkout.html', error="Phone number must be exactly 10 digits.")
+
             # Get cart data from hidden inputs
-            cart_data = json.loads(request.form['cart_data'])
-            total_amount = float(request.form['total_amount'])
-            
-            # Validate cart not empty
-            if not cart_data:
-                return render_template('checkout.html', error='Your cart is empty')
-            
-            # Create order record
-            orders_table.put_item(
-                Item={
-                    'order_id': str(uuid.uuid4()),
-                    'username': session['username'],
-                    'name': name,
-                    'address': address,
-                    'phone': int(phone),  # Convert to number
-                    'items': cart_data,
-                    'total_amount': total_amount,
-                    'payment_method': payment_method,
-                    'timestamp': datetime.now().isoformat()
-                }
-            )
-            
-            # Clear client-side cart via JavaScript
-            return redirect(url_for('sucess'))
-            
-        except json.JSONDecodeError:
-            return render_template('checkout.html', error='Invalid cart data')
-        except ValueError as e:
-            return render_template('checkout.html', error='Invalid phone number format')
+            cart_data = request.form.get('cart_data', '[]')
+            total_amount = request.form.get('total_amount', '0')
+
+            try:
+                cart_items = json.loads(cart_data)
+                total_amount = float(total_amount)
+            except (json.JSONDecodeError, ValueError):
+                return render_template('checkout.html', error="Invalid cart data format.")
+
+            # Ensure cart is not empty
+            if not cart_items:
+                return render_template('checkout.html', error="Your cart is empty.")
+
+            # Store order in DynamoDB
+            try:
+                orders_table.put_item(
+                    Item={
+                        'order_id': str(uuid.uuid4()),
+                        'username': session.get('username', 'Guest'),
+                        'name': name,
+                        'address': address,
+                        'phone': phone,
+                        'items': cart_items,
+                        'total_amount': total_amount,
+                        'payment_method': payment_method,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                )
+            except Exception as db_error:
+                print(f"DynamoDB Error: {db_error}")
+                return render_template('checkout.html', error="Failed to save order. Please try again later.")
+
+            # Redirect to success page with success message
+            return redirect(url_for('sucess', message="Your order has been placed successfully!"))
+
         except Exception as e:
             print(f"Checkout error: {str(e)}")
-            return render_template('checkout.html', error='Failed to process order')
-    
-    return render_template('checkout.html')
+            return render_template('checkout.html', error="An unexpected error occurred. Please try again.")
+
+    return render_template('checkout.html')  # Render checkout page for GET request
+
 
 @app.route('/sucess')
 def success():
