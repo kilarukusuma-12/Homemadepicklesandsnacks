@@ -31,7 +31,7 @@
         .nav-links {
             list-style: none;
             display: flex;
-            gap: 20px;
+            gap: 25px;
             margin-left: auto;
             padding: 100;
             align-items: left;
@@ -179,12 +179,7 @@
 
     <div class="container">
         {% if error %}
-        <div class="error-message" style="color: #ff4444;
-                    padding: 15px;
-                    margin-bottom: 20px;
-                    background: #ffebee;
-                    border-radius: 8px;
-                    text-align: center;">
+        <div class="error-message" style="color: #ff4444; padding: 15px; margin-bottom: 20px; background: #ffebee; border-radius: 8px; text-align: center;">
             {{ error }}
         </div>
         {% endif %}
@@ -227,10 +222,9 @@
             </div>
 
             <button type="submit" class="confirm-btn">Confirm Order</button>
+            <p id="error-message" style="color: red; text-align: center;"></p>
         </form>
     </div>
-
-    
 
     <footer>
         <p>© 2024 HomeMade Pickles. All rights reserved.</p>
@@ -241,10 +235,9 @@
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
         let totalAmount = 0;
     
-        // ========== FIX 1: CALL FUNCTION ON PAGE LOAD ==========
         // Initialize cart display when page loads
         displayCartItems();
-    
+
         function displayCartItems() {
             const container = document.getElementById('cart-items-list');
             const totalItemsElement = document.getElementById('total-items');
@@ -270,11 +263,11 @@
                     </div>
                 `;
             });
-    
+
             container.innerHTML = html;
             totalItemsElement.textContent = `Total Items: ${totalItems}`;
             totalAmountElement.textContent = `Total Amount: ₹${totalAmount}`;
-            
+
             // Update hidden inputs for form submission
             document.getElementById('cart-data').value = JSON.stringify(cart);
             document.getElementById('total-amount-data').value = totalAmount;
@@ -282,11 +275,16 @@
             // Update cart count in header
             document.getElementById('cart-count').textContent = totalItems;
         }
-    
-        // ========== FIX 2: PROPER FORM HANDLING ==========
+
         document.getElementById('checkout-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
+            // Ensure cart is not empty
+            if (cart.length === 0) {
+                document.getElementById('error-message').textContent = "Your cart is empty. Add items before proceeding!";
+                return;
+            }
+
             // Validate phone number format
             const phoneInput = document.getElementById('phone');
             if (!/^\d{10}$/.test(phoneInput.value)) {
@@ -294,13 +292,16 @@
                 return;
             }
 
+            // Debugging: Log cart data before submitting
+            console.log("Submitting order with data:", {
+                cart_data: JSON.stringify(cart),
+                total_amount: totalAmount
+            });
+
             // Submit form
             this.submit();
-            
-            // Clear cart only after successful submission
-            localStorage.removeItem('cart');
         });
-    
+
     </script>
 </body>
 </html>
